@@ -5,8 +5,8 @@ from datetime import datetime
 from ultralytics import YOLO
 from collections import Counter
 
-# Carga el modelo preentrenado YOLOv8
-modelo = YOLO('yolov8n.pt')
+# Carga el modelo YOLOv8s para mayor precision en tiempo real
+modelo = YOLO('yolov8s.pt')
 
 # Archivo donde se guarda el historial de detecciones
 ARCHIVO_HISTORIAL = 'historial_detecciones.csv'
@@ -37,22 +37,27 @@ def guardar_detecciones(detecciones):
             ])
 
 def dibujar_conteo(fotograma, conteo):
-    # Dibuja el conteo de objetos en la esquina superior derecha
-    alto, ancho = fotograma.shape[:2]
-    x_inicio = ancho - 220
-    y_inicio = 20
+    # Dibuja el conteo de objetos en la esquina superior izquierda
+    x_inicio = 10
+    y_inicio = 25
 
-    cv2.rectangle(fotograma, (x_inicio - 10, y_inicio - 15),
-                  (ancho - 5, y_inicio + len(conteo) * 25 + 5),
+    # Fondo negro
+    alto_caja = len(conteo) * 30 + 35
+    cv2.rectangle(fotograma,
+                  (x_inicio - 5, y_inicio - 20),
+                  (x_inicio + 220, y_inicio + alto_caja),
                   (0, 0, 0), -1)
 
+    # Titulo
     cv2.putText(fotograma, 'Conteo:', (x_inicio, y_inicio),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
+    # Conteo por clase
     for i, (clase, cantidad) in enumerate(conteo.items()):
         texto = f'{clase}: {cantidad}'
-        cv2.putText(fotograma, texto, (x_inicio, y_inicio + (i + 1) * 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
+        cv2.putText(fotograma, texto,
+                    (x_inicio, y_inicio + (i + 1) * 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
 
     return fotograma
 
@@ -62,7 +67,7 @@ inicializar_historial()
 # Inicializa la camara
 camara = cv2.VideoCapture(0)
 
-print('Detector iniciado')
+print('Detector iniciado con YOLOv8s')
 print(f'Historial guardado en: {ARCHIVO_HISTORIAL}')
 print('Presiona Q para salir')
 
@@ -74,8 +79,8 @@ while True:
     if not ret:
         break
 
-    # Deteccion de objetos en el fotograma actual
-    resultados = modelo(fotograma, verbose=False)
+    # Deteccion con umbral de confianza del 70%
+    resultados = modelo(fotograma, verbose=False, conf=0.7)
     fotograma_anotado = resultados[0].plot()
 
     # Extrae las detecciones del fotograma
